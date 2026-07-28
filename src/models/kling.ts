@@ -63,6 +63,22 @@ const KLING_PARAMS: ModelParam[] = [
 	},
 ]
 
+const KLING_3_PARAMS: ModelParam[] = KLING_PARAMS.map((param) => param.id === 'mode'
+	? {
+		...param,
+		providerOverrides: {
+			...param.providerOverrides,
+			pika: {
+				options: [
+					{ label: 'Standard', value: 'std' },
+					{ label: 'Pro', value: 'pro' },
+					{ label: '4K', value: '4k' },
+				],
+			},
+		},
+	}
+	: param)
+
 const KLING_OMNI_TIMED_MODES = ['text-to-video', 'first-frame', 'first-last-frame', 'image-ref', 'video-ref'] as const
 const KLING_OMNI_RATIO_MODES = ['text-to-video', 'image-ref', 'video-ref'] as const
 
@@ -99,6 +115,7 @@ const KLING_OMNI_PARAMS: ModelParam[] = [
 			{ label: 'Pro', value: 'pro' },
 			{ label: '4K', value: '4k' },
 		],
+		providerOverrides: { pika: { hidden: true } },
 		default: 'std',
 	},
 	{
@@ -121,6 +138,7 @@ const KLING_OMNI_PARAMS: ModelParam[] = [
 			{ label: 'Multi shots', value: 'true' },
 			{ label: 'Single shot', value: 'false' },
 		],
+		providerOverrides: { pika: { hidden: true } },
 		default: 'true',
 	},
 	{
@@ -142,6 +160,11 @@ export const kling3: ModelConfig = {
 	type: 'video',
 	supportedProviders: {
 		kling: { apiModelId: 'kling-v3' },
+		pika: {
+			apiModelId: 'kling-v3',
+			aggregated: true,
+			modes: ['text-to-video', 'first-frame', 'motion-control'],
+		},
 		// APIMart exposes Kling only via its Motion Control endpoint.
 		apimart: { apiModelId: 'kling-v3-motion-control', modes: ['motion-control'] },
 		fal: { apiModelId: 'fal-ai/kling-video/v3/pro', modes: ['text-to-video', 'first-frame', 'first-last-frame'] },
@@ -152,7 +175,7 @@ export const kling3: ModelConfig = {
 	// T2V + first-frame (image→video) + first-last-frame (start+end keyframe)
 	// + motion-control (character image + reference motion video, V3.0 only)
 	modes: ['text-to-video', 'first-frame', 'first-last-frame', 'motion-control'],
-	params: KLING_PARAMS,
+	params: KLING_3_PARAMS,
 }
 
 export const klingOmni3: ModelConfig = {
@@ -161,6 +184,7 @@ export const klingOmni3: ModelConfig = {
 	type: 'video',
 	supportedProviders: {
 		kling: { apiModelId: 'kling-v3-omni' },
+		pika: { apiModelId: 'kling-o3', modes: ['first-frame'] },
 		apimart: { apiModelId: 'kling-v3-omni' },
 	},
 	modes: ['text-to-video', 'first-frame', 'first-last-frame', 'image-ref', 'video-ref', 'video-edit'],

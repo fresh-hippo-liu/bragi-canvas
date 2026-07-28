@@ -102,6 +102,7 @@ export interface BragiSettings {
 			bfl: string
 			runpod: string
 			fal: string
+			pika: string
 		minimax: string
 		elevenlabs: string
 		legnext: string
@@ -175,6 +176,7 @@ export const DEFAULT_SETTINGS: BragiSettings = {
 			bfl: '',
 			runpod: '',
 			fal: '',
+			pika: '',
 		minimax: '',
 		elevenlabs: '',
 		legnext: '',

@@ -9,6 +9,7 @@ import { GeminiProvider } from './gemini'
 import { SeedreamProvider } from './seedream'
 import { SeedanceProvider } from './seedance'
 import { KlingProvider } from './kling'
+import { PikaVideoProvider, testPikaConnection } from './pika'
 import { VeoProvider } from './veo'
 import { FalImageProvider, FalVideoProvider } from './fal'
 import { FalAudioProvider } from './fal-audio'
@@ -268,6 +269,17 @@ export const PROVIDERS: ProviderSpec[] = [
 		makeVideo: ({ settings, app, outputDir }) =>
 			new KlingProvider(settings.providers.klingAk, settings.providers.klingSk, app, outputDir),
 		// Kling uses JWT with HMAC-SHA256; auth is complex. Skip network test for now — Save will fail fast at first use.
+	},
+	{
+		id: 'pika',
+		name: 'Pika',
+		docUrl: 'https://dev.pika.art/models',
+		fields: [{ key: 'pika', label: 'API key', placeholder: 'pk_...', type: 'password' }],
+		defaultRefDelivery: { image: 'relay', video: 'relay' },
+		isConfigured: (s) => !!s.providers.pika,
+		makeVideo: ({ settings, app, outputDir }) =>
+			new PikaVideoProvider(settings.providers.pika, app, outputDir),
+		testConnection: (d) => testPikaConnection(d.pika || ''),
 	},
 	{
 		id: 'fal',

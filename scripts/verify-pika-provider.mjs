@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -221,6 +221,61 @@ try {
 	assert.deepEqual(await testPikaConnection('valid-key'), { ok: true, message: 'Connected.' })
 	process.__bragiPikaRequestHandler = async () => ({ status: 401, json: { message: 'Unauthorized' } })
 	assert.deepEqual(await testPikaConnection('bad-key'), { ok: false, message: 'Invalid API key.' })
+
+	const [settingsSource, migrationsSource, registrySource, modelSource] = await Promise.all([
+		readFile('src/settings.ts', 'utf8'),
+		readFile('src/settings-migrations.ts', 'utf8'),
+		readFile('src/providers/registry.ts', 'utf8'),
+		readFile('src/models/kling.ts', 'utf8'),
+	])
+	assert.match(settingsSource, /pika: string/, 'Settings type must include providers.pika.')
+	assert.match(settingsSource, /pika: ''/, 'Default settings must include an empty Pika key.')
+	assert.match(
+		migrationsSource,
+		/CURRENT_SETTINGS_SCHEMA_VERSION = 9/,
+		'Adding a provider credential must advance the settings schema version.',
+	)
+	assert.match(
+		registrySource,
+		/import \{ PikaVideoProvider, testPikaConnection \} from '\.\/pika'/,
+		'Provider registry must import the Pika implementation and connection test.',
+	)
+	assert.match(
+		registrySource,
+		/id: 'pika'[\s\S]*?name: 'Pika'[\s\S]*?defaultRefDelivery: \{ image: 'relay', video: 'relay' \}[\s\S]*?makeVideo:/,
+		'Provider registry must expose Pika as a relay-backed video provider.',
+	)
+	assert.match(
+		registrySource,
+		/testConnection: \(d\) => testPikaConnection\(d\.pika \|\| ''\)/,
+		'Provider registry must use the non-generating Pika connection test.',
+	)
+	assert.match(
+		modelSource,
+		/id: 'kling-3\.0'[\s\S]*?pika: \{[\s\S]*?apiModelId: 'kling-v3'[\s\S]*?aggregated: true[\s\S]*?modes: \['text-to-video', 'first-frame', 'motion-control'\][\s\S]*?\}/,
+		'Kling 3.0 must map Pika to the exact supported modes.',
+	)
+	assert.match(
+		modelSource,
+		/id: 'mode'[\s\S]*?providerOverrides: \{[\s\S]*?pika: \{[\s\S]*?label: 'Standard', value: 'std'[\s\S]*?label: 'Pro', value: 'pro'[\s\S]*?label: '4K', value: '4k'/,
+		'Kling 3.0 must expose Pika Standard, Pro, and 4K quality routes.',
+	)
+	assert.match(
+		modelSource,
+		/id: 'kling-3\.0-omni'[\s\S]*?pika: \{ apiModelId: 'kling-o3', modes: \['first-frame'\] \}/,
+		'Kling 3.0 Omni must map Pika O3 to first-frame only.',
+	)
+	assert.match(
+		modelSource,
+		/id: 'mode'[\s\S]*?providerOverrides: \{ pika: \{ hidden: true \} \}/,
+		'Kling 3.0 Omni must hide its unsupported quality selector for Pika.',
+	)
+	assert.match(
+		modelSource,
+		/id: 'multi_shot'[\s\S]*?providerOverrides: \{ pika: \{ hidden: true \} \}/,
+		'Kling 3.0 Omni must hide its unsupported multi-shot selector for Pika.',
+	)
+	assert.doesNotMatch(modelSource, /id: 'kling-o1'/, 'This change must not add a mismatched Kling O1 model.')
 
 	console.log('Pika provider checks passed.')
 } finally {
