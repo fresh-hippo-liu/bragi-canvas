@@ -58,6 +58,16 @@ When you add a model/provider, run the check; if it fails, fix the catalog rathe
 - Duration is an integer from 3 through 15. Quality values are `std`, `pro`, and `4k`. Generated audio is unavailable when `video_list` is present.
 - Keep the generator bar compact: expose duration, ratio, quality, the mode-relevant audio control, and a `Multi shots` / `Single shot` toggle. `Multi shots` is the default and maps to intelligent splitting (`multi_shot = true`, `shot_type = intelligence`). Advanced callers may still pass custom `multi_prompt` shot lists and `element_list` directly.
 
+## Pika Kling
+
+- Base URL: `https://api.dev.pika.art`. Authenticate every request with the configured Pika key in the `X-API-Key` header.
+- Bragi Kling 3.0 maps to Pika `kling-v3`. Text-to-video and first-frame generation route through `/v1/media/kling/kling-v3/{quality}/text-to-video` and `/v1/media/kling/kling-v3/{quality}/image-to-video`; motion control uses `/v1/media/kling/kling-v3/motion-control`.
+- Kling 3.0 quality values map `std` to Pika `standard` and preserve `pro` and `4k`. Pika does not expose Kling 3.0 first-last-frame generation.
+- Bragi Kling 3.0 Omni maps only its first-frame mode to Pika `kling-o3` at `/v1/media/kling/kling-o3/image-to-video`. Hide the native Omni quality and multi-shot controls for this provider.
+- Send Pika reference images and videos as Bragi temporary Relay HTTPS URLs.
+- Poll all submitted tasks through `GET /v1/media/jobs/{id}`. On completion, use `output.video.url`, falling back to `GET /v1/media/jobs/{id}/content` when the status payload omits the content URL.
+- Do not add Pika Kling O1 or map it to an existing Bragi model: Pika exposes it only as video-to-video and Bragi has no exact catalogue match. Pika also has no exact Kling 2.6 mapping.
+
 ## SuChuang Gemini Omni
 
 - Endpoint: `POST https://api.wuyinkeji.com/api/async/video_google_omni`.

@@ -222,11 +222,12 @@ try {
 	process.__bragiPikaRequestHandler = async () => ({ status: 401, json: { message: 'Unauthorized' } })
 	assert.deepEqual(await testPikaConnection('bad-key'), { ok: false, message: 'Invalid API key.' })
 
-	const [settingsSource, migrationsSource, registrySource, modelSource] = await Promise.all([
+	const [settingsSource, migrationsSource, registrySource, modelSource, modelRulesSource] = await Promise.all([
 		readFile('src/settings.ts', 'utf8'),
 		readFile('src/settings-migrations.ts', 'utf8'),
 		readFile('src/providers/registry.ts', 'utf8'),
 		readFile('src/models/kling.ts', 'utf8'),
+		readFile('docs/model-provider-rules.md', 'utf8'),
 	])
 	assert.match(settingsSource, /pika: string/, 'Settings type must include providers.pika.')
 	assert.match(settingsSource, /pika: ''/, 'Default settings must include an empty Pika key.')
@@ -276,6 +277,11 @@ try {
 		'Kling 3.0 Omni must hide its unsupported multi-shot selector for Pika.',
 	)
 	assert.doesNotMatch(modelSource, /id: 'kling-o1'/, 'This change must not add a mismatched Kling O1 model.')
+	assert.match(
+		modelRulesSource,
+		/## Pika Kling[\s\S]*Kling 3\.0[\s\S]*Kling 3\.0 Omni/,
+		'Provider rules must document the Pika Kling 3.0 and Kling 3.0 Omni mappings.',
+	)
 
 	console.log('Pika provider checks passed.')
 } finally {
