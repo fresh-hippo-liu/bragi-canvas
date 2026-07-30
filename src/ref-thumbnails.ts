@@ -4,6 +4,7 @@ import type { Canvas, CanvasNode } from './types/canvas-internal'
 import { getUpstreamInputs } from './edge-parser'
 import { clearIncomingRefAttachments, isGeneratingPlaceholderNode } from './generating-node'
 import { beginRefDrag, endRefDrag, isRefDragActive } from './ref-drag-guard'
+import { findFileNodeByPath, getAssetIdsForFiles, getNodeAssetIdMap } from './asset-ids'
 
 const STRIP_CLASS = 'bragi-ref-strip'
 const NODE_HAS_REFS_CLASS = 'bragi-has-refs'
@@ -102,8 +103,8 @@ export function updateRefThumbnails(canvas: Canvas, node: CanvasNode, app: App):
 		wrapper.appendChild(badge)
 
 		// Asset ID indicator — read from the source image node
-		const sourceImageNode = findImageNode(canvas, imgPath)
-		const assetIds = sourceImageNode ? getNodeAssetIds(sourceImageNode) : {}
+		const sourceImageNode = findFileNodeByPath(canvas, imgPath)
+		const assetIds = sourceImageNode ? getNodeAssetIdMap(sourceImageNode) : {}
 		const assetIdCount = Object.keys(assetIds).length
 
 		if (assetIdCount > 0) {
@@ -172,53 +173,12 @@ export function updateRefThumbnails(canvas: Canvas, node: CanvasNode, app: App):
 }
 
 /**
- * Find the canvas node for a given image file path.
- */
-function findImageNode(canvas: Canvas, imgPath: string): CanvasNode | null {
-	const nodes = canvas.nodes instanceof Map
-		? Array.from(canvas.nodes.values())
-		: canvas.nodes as unknown[]
-	for (const n of nodes) {
-		const d = n.getData()
-		if (d.type === 'file' && (d).file === imgPath) return n
-	}
-	return null
-}
-
-function getNodeAssetIds(node: CanvasNode): Record<string, string> {
-	const d = node.getData() as { bragiAssetId?: string; bragiAssetIds?: Record<string, string> }
-	const ids = { ...(d.bragiAssetIds || {}) }
-	if (d.bragiAssetId && !ids.legacy) ids.legacy = d.bragiAssetId
-	return ids
-}
-
-function getProviderAssetId(node: CanvasNode, providerId?: string): string {
-	const d = node.getData() as { bragiAssetId?: string; bragiAssetIds?: Record<string, string> }
-	if (providerId) {
-		const scoped = d.bragiAssetIds?.[providerId]
-		if (scoped) return scoped
-		if ((providerId === 'bytedance' || providerId === 'byteplus') && d.bragiAssetId) return d.bragiAssetId
-		return ''
-	}
-	return d.bragiAssetId || ''
-}
-
-/**
  * Get asset ID map for a node's upstream images.
  * Reads provider-scoped bragiAssetIds first; legacy bragiAssetId only falls
  * back for Volcengine/BytePlus compatibility.
  */
 export function getAssetIds(canvas: Canvas, node: CanvasNode, providerId?: string): Record<string, string> {
-	const images = getOrderedImages(canvas, node)
-	const result: Record<string, string> = {}
-	for (const imgPath of images) {
-		const imgNode = findImageNode(canvas, imgPath)
-		if (imgNode) {
-			const assetId = getProviderAssetId(imgNode, providerId)
-			if (assetId) result[imgPath] = assetId
-		}
-	}
-	return result
+	return getAssetIdsForFiles(canvas, getOrderedImages(canvas, node), providerId)
 }
 
 export function refreshAllThumbnails(canvas: Canvas, app: App): void {

@@ -54,6 +54,8 @@ Incoming directed edges are treated as upstream references. Text nodes contribut
 
 On an audio file node, **Voice Changer** uses the selected audio for content, timing, and emotion, and exactly one incoming audio node as the target voice reference. The action requires a configured ElevenLabs provider and creates a new audio node for every click, so multiple conversions can run in parallel.
 
+Image and audio file nodes can store provider-scoped Seedance Asset IDs. Right-click the file node, choose **Set Seedance asset ID**, select TokenRouter, BytePlus, or Volcengine, then save or clear the ID. When that file is connected as a Seedance reference, Bragi passes the saved value as an `asset://` reference for the matching provider.
+
 ## MCP server
 
 The MCP server is disabled by default. When enabled in settings, it listens on `127.0.0.1` and exposes canvas operations to local MCP clients. You can configure the port and an optional access token. If a token is set, clients must send `Authorization: Bearer <token>` on every request.
