@@ -14,6 +14,7 @@ import { getOrderedTextRefs } from './text-refs'
 import { getOrderedImages } from './ref-thumbnails'
 import type { TaskQueue, TaskSnapshot } from './task-queue'
 import type { BragiSettings } from './settings'
+import { getSeedanceAssetMediaKind, setNodeAssetId, type SeedanceAssetProviderId } from './asset-ids'
 
 export type GetCanvas = () => Canvas | null
 export type RunGeneration = (node: CanvasNode, result: PanelResult) => Promise<{
@@ -27,7 +28,6 @@ export interface McpToolResult {
 type ToolArgs<Args extends ToolSchema> = z.infer<z.ZodObject<Args>>
 
 type JsonMap = Record<string, unknown>
-type SeedanceAssetProviderId = 'tokenrouter' | 'byteplus' | 'bytedance'
 type BragiCanvasNodeData = AllCanvasNodeData & {
 	bragiAssetId?: string
 	bragiAssetIds?: Record<string, string>
@@ -908,7 +908,7 @@ export function createMcpToolRegistry(ctx: McpToolContext): McpToolDef[] {
 		{
 			category: 'Files / assets',
 			name: 'set_asset_id',
-			description: 'Bind a provider-specific Seedance Asset ID to an image file node. Used for face-reference asset://<id> protocol. Pass empty string to clear.',
+			description: 'Bind a provider-specific Seedance Asset ID to an image or audio file node. Pass empty string to clear.',
 			inputSchema: {
 				nodeId: z.string(),
 				provider: z.enum(['tokenrouter', 'byteplus', 'bytedance']).optional().describe('Asset provider namespace. Defaults to tokenrouter.'),
@@ -918,17 +918,11 @@ export function createMcpToolRegistry(ctx: McpToolContext): McpToolDef[] {
 				const canvas = requireCanvas(getCanvas)
 				const node = findNode(canvas, nodeId)
 				const d = node.getData() as BragiCanvasNodeData
-				if (d.type !== 'file' || !/\.(png|jpg|jpeg|webp|bmp|tiff?|gif|heic|heif)$/i.test(d.file || '')) {
-					throw new Error('Asset ID only applies to image file nodes')
+				if (d.type !== 'file' || !getSeedanceAssetMediaKind(d.file || '')) {
+					throw new Error('Asset ID only applies to image or audio file nodes')
 				}
 				const providerId = (provider || 'tokenrouter') as SeedanceAssetProviderId
-				const next = { ...d }
-				const ids = { ...(next.bragiAssetIds || {}) }
-				if (assetId) ids[providerId] = assetId
-				else delete ids[providerId]
-				if (Object.keys(ids).length > 0) next.bragiAssetIds = ids
-				else delete next.bragiAssetIds
-				node.setData(next)
+				setNodeAssetId(node, providerId, assetId)
 				void canvas.requestSave()
 				return ok({ nodeId, provider: providerId, assetId: assetId || null })
 			},

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added provider-scoped Seedance Asset ID binding to audio file nodes through the canvas context menu and MCP, with `asset://` reuse during video generation.
+
 ## 1.30.1
 
 - Removed forbidden `obsidianmd/ui/sentence-case` disable comments from Voice Changer UI copy.
