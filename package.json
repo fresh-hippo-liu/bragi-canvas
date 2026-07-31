@@ -16,6 +16,7 @@
     "test:update-check": "node scripts/verify-update-check.mjs",
     "test:gemini-video-text": "node scripts/verify-gemini-video-text.mjs",
     "test:bfl-denoise": "node scripts/verify-bfl-denoise.mjs",
+    "test:local-denoise": "node scripts/verify-local-denoise.mjs",
     "test:fal-flux-klein": "node scripts/verify-fal-flux-klein.mjs",
     "test:legnext-image-result": "node scripts/verify-legnext-image-result.mjs",
     "test:mulerouter-carrothub": "node scripts/verify-mulerouter-carrothub-images.mjs",

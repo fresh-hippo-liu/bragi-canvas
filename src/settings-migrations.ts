@@ -10,7 +10,7 @@ import { DEFAULT_SETTINGS, type BragiSettings, type GeneratedAssetRecord, type L
 
 type UnknownRecord = Record<string, unknown>
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 9
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 10
 const PROVIDER_MODEL_PREFS_SCHEMA_VERSION = 2
 
 export interface SettingsMigrationResult {
@@ -306,6 +306,7 @@ function readSettings(raw: UnknownRecord, defaults: BragiSettings): { settings: 
 	readOptionalBoolean(raw, 'mcpEnabled', target, errors)
 	readOptionalPort(raw, 'mcpPort', target, errors)
 	readOptionalString(raw, 'mcpToken', target, errors)
+	readOptionalString(raw, 'denoiseServiceUrl', target, errors)
 	readOptionalStringArray(raw, 'knownCanvases', target, errors)
 	settings.generatedAssets = readGeneratedAssets(raw, errors)
 	settings.updatePrompt = readUpdatePrompt(raw, errors)
@@ -527,6 +528,7 @@ const RECOGNIZABLE_KEYS = [
 	'mcpEnabled',
 	'mcpPort',
 	'mcpToken',
+	'denoiseServiceUrl',
 	'knownCanvases',
 	'generatedAssets',
 	'updatePrompt',

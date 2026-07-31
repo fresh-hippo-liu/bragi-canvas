@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian Canvas internals and provider payloads are runtime-shaped data that this plugin narrows at use sites. */
-import { Plugin, Notice, requestUrl, Menu, Modal, Setting } from 'obsidian'
+import { Plugin, Notice, requestUrl, Menu, Modal, Setting, normalizePath } from 'obsidian'
 import { BragiSettings, DEFAULT_SETTINGS, BragiSettingTab, type GeneratedAssetRecord } from './settings'
 import { migrateSettings } from './settings-migrations'
 import { uploadRef } from './providers/upload'
@@ -45,6 +45,8 @@ import { UpdateReminderModal } from './ui/update-modal'
 import { dashScopeRegion } from './providers/dashscope'
 import { BFL_DENOISE_PROMPT } from './providers/bfl'
 import { getAssetIdsForFiles, getNodeAssetId, getNodeAssetIdMap, getSeedanceAssetMediaKind, SEEDANCE_ASSET_PROVIDER_LABELS, setNodeAssetId, type SeedanceAssetProviderId } from './asset-ids'
+import { requestNlm35Denoise } from './denoise'
+import { DenoiseChoiceModal, type DenoiseMethod } from './ui/denoise-choice-modal'
 
 const ELEVENLABS_VOICE_CHANGER_MODEL_ID = 'eleven_multilingual_sts_v2'
 
@@ -405,7 +407,6 @@ export default class BragiCanvas extends Plugin {
 			(node, activeCanvas) => openImageAnnotationTool(this, activeCanvas, node, 'box'),
 			(node, activeCanvas) => openVideoEditTool(this, activeCanvas, node),
 			(node, activeCanvas) => this.openDenoiseImage(node, activeCanvas),
-			() => this.canDenoiseImage(),
 		)
 
 		patchPlaceholderContextMenu(canvas)
@@ -475,35 +476,75 @@ export default class BragiCanvas extends Plugin {
 	}
 
 	openDenoiseImage(node: CanvasNode, canvas: Canvas): void {
-		void this.handleImageDenoise(node, canvas)
+		const fluxContext = this.getFluxDenoiseContext()
+		const fluxProviderName = fluxContext
+			? getProvider(fluxContext.activeProvider)?.name || fluxContext.activeProvider
+			: undefined
+		new DenoiseChoiceModal(this.app, {
+			fluxAvailable: Boolean(fluxContext),
+			fluxProviderName,
+			onChoose: method => { void this.handleImageDenoise(node, canvas, method) },
+		}).open()
 	}
 
-	private canDenoiseImage(): boolean {
+	private getFluxDenoiseContext(): { model: ModelConfig; activeProvider: string } | null {
 		const model = getModelById('flux-2-klein-9b')
-		if (!model) return false
+		if (!model) return null
 		const pref = this.settings.modelPrefs[model.id]
-		if (!pref?.enabled) return false
-		const connectedProviders = getConnectedConfiguredProviderIds(this.settings, model)
-		return getActiveProvider(model, pref.selectedProvider, connectedProviders) !== null
-	}
-
-	async handleImageDenoise(node: CanvasNode, canvas: Canvas): Promise<void> {
-		const model = getModelById('flux-2-klein-9b')
-		if (!model) {
-			new Notice('FLUX.2 Klein 9B is not available')
-			return
-		}
-		const pref = this.settings.modelPrefs[model.id]
-		if (!pref?.enabled) {
-			new Notice('Add FLUX.2 Klein 9B in settings to use denoise')
-			return
-		}
+		if (!pref?.enabled) return null
 		const connectedProviders = getConnectedConfiguredProviderIds(this.settings, model)
 		const activeProvider = getActiveProvider(model, pref.selectedProvider, connectedProviders)
-		if (!activeProvider) {
-			new Notice('Connect BFL, RunPod, or fal.ai to FLUX.2 Klein 9B in settings to use denoise')
+		return activeProvider ? { model, activeProvider } : null
+	}
+
+	async handleImageDenoise(node: CanvasNode, canvas: Canvas, method: DenoiseMethod = 'nlm35'): Promise<void> {
+		if (method === 'nlm35') {
+			await this.handleNlm35ImageDenoise(node, canvas)
 			return
 		}
+		await this.handleFluxImageDenoise(node, canvas)
+	}
+
+	private async handleNlm35ImageDenoise(node: CanvasNode, canvas: Canvas): Promise<void> {
+		const nodeData = node.getData() as { file?: string; width?: number; height?: number }
+		const filePath = nodeData.file || ''
+		if (!filePath) {
+			new Notice('No image file found')
+			return
+		}
+
+		const placeholder = createPlaceholderNode(canvas, 'NLM 35', node, {
+			w: Math.max(120, Math.round(nodeData.width || node.width || 400)),
+			h: Math.max(120, Math.round(nodeData.height || node.height || 300)),
+		})
+		this.syncGenerating.add(placeholder.id)
+
+		try {
+			new Notice('Running local denoise…')
+			const dataUri = await this.readImageDataUri(filePath)
+			const result = await requestNlm35Denoise(dataUri, this.settings.denoiseServiceUrl)
+			const outputPath = await this.writeNlm35Result(filePath, result.bytes)
+
+			this.rememberGeneratedAsset(outputPath)
+			replacePlaceholderWithFile(canvas, placeholder, outputPath, node)
+			new Notice('Denoised image ready')
+		} catch (err: unknown) {
+			console.error('Bragi Canvas NLM 35 denoise error:', err)
+			const message = err instanceof Error ? err.message : 'NLM 35 denoise failed'
+			markNodeFailed(placeholder, message)
+			new Notice(`NLM 35 failed: ${message}`)
+		} finally {
+			this.syncGenerating.delete(placeholder.id)
+		}
+	}
+
+	private async handleFluxImageDenoise(node: CanvasNode, canvas: Canvas): Promise<void> {
+		const context = this.getFluxDenoiseContext()
+		if (!context) {
+			new Notice('Connect BFL, RunPod, or fal.ai to FLUX.2 Klein 9B in settings to use AI refine')
+			return
+		}
+		const { model, activeProvider } = context
 
 		const nodeData = node.getData() as { file?: string; width?: number; height?: number }
 		const filePath = nodeData.file || ''
@@ -551,6 +592,22 @@ export default class BragiCanvas extends Plugin {
 		} finally {
 			this.syncGenerating.delete(placeholder.id)
 		}
+	}
+
+	private async writeNlm35Result(sourcePath: string, bytes: ArrayBuffer): Promise<string> {
+		const outputDir = normalizePath(this.getOutputDir())
+		const adapter = this.app.vault.adapter
+		let current = ''
+		for (const part of outputDir.split('/').filter(Boolean)) {
+			current = current ? `${current}/${part}` : part
+			if (!await adapter.exists(current)) await adapter.mkdir(current)
+		}
+
+		const sourceName = sourcePath.split('/').pop()?.replace(/\.[^.]+$/, '') || 'image'
+		const safeName = sourceName.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'image'
+		const outputPath = normalizePath(`${outputDir}/${safeName}_nlm35_${Date.now()}.png`)
+		await adapter.writeBinary(outputPath, bytes)
+		return outputPath
 	}
 
 	private async readImageDataUri(filePath: string): Promise<string> {
