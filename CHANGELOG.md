@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## 1.31.0
+
+- Added Pika provider support for Kling 3.0 and Kling 3.0 Omni, including provider-scoped modes and static request verification.
 - Added provider-scoped Seedance Asset ID binding to audio file nodes through the canvas context menu and MCP, with `asset://` reuse during video generation.
+- Added Seedance 2.0 `4k` resolution support for the generation bar and MCP calls.
+- Added local NLM 35 as the default Denoise choice, with a configurable local service URL and static verification.
+- Bumped the plugin version to `1.31.0`.
 
 ## 1.30.1
 
