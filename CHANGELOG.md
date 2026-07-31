@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.31.1
+
+- Removed the forbidden `obsidianmd/ui/sentence-case` disable comment from the Denoise choice modal.
+- Changed Denoise option labels to sentence case for Obsidian community review.
+- Bumped the plugin version to `1.31.1`.
+
 ## 1.31.0
 
 - Added Pika provider support for Kling 3.0 and Kling 3.0 Omni, including provider-scoped modes and static request verification.

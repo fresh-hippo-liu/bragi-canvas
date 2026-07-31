@@ -25,15 +25,14 @@ export class DenoiseChoiceModal extends Modal {
 			.setDesc('Local CPU denoise does not redraw or resize the image.')
 
 		methodSetting.addDropdown(dropdown => {
-			// eslint-disable-next-line obsidianmd/ui/sentence-case -- NLM and CPU are standard initialisms.
-			const nlmLabel = 'NLM 35 - Local CPU'
+			const nlmLabel = 'NLM 35 - local CPU'
 			dropdown
 				.addOption('nlm35', nlmLabel)
 				.addOption(
 					'flux',
 					this.options.fluxAvailable
 						? `FLUX.2 Klein 9B - ${this.options.fluxProviderName || 'AI refine'}`
-						: 'FLUX.2 Klein 9B - Not configured',
+						: 'FLUX.2 Klein 9B - not configured',
 				)
 				.setValue(this.method)
 				.onChange(value => {
