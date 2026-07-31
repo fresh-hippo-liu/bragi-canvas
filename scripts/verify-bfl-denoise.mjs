@@ -10,6 +10,7 @@ const registrySource = readFileSync('src/providers/registry.ts', 'utf8')
 const modelSource = readFileSync('src/models/flux.ts', 'utf8')
 const modelIndexSource = readFileSync('src/models/index.ts', 'utf8')
 const settingsSource = readFileSync('src/settings.ts', 'utf8')
+const denoiseModalSource = readFileSync('src/ui/denoise-choice-modal.ts', 'utf8')
 
 function assertOrder(source, first, second, message) {
 	const firstIndex = source.indexOf(first)
@@ -131,26 +132,22 @@ assert.match(
 	'Denoise toolbar elements must be cleaned up by the toolbar cleanup paths.',
 )
 
-assert.doesNotMatch(
+assert.match(
 	mainSource,
-	/DenoiseImageModal/,
-	'Denoise should run directly from the toolbar instead of opening the old two-choice modal.',
+	/\(node, activeCanvas\) => this\.openDenoiseImage\(node, activeCanvas\),\s*\n\s*\)/,
+	'Canvas menu must keep Denoise visible independently of FLUX configuration.',
 )
 assert.match(
 	mainSource,
-	/\(node, activeCanvas\) => this\.openDenoiseImage\(node, activeCanvas\),\s*\n\s*\(\) => this\.canDenoiseImage\(\)/,
-	'Canvas menu must pair the denoise callback with its dynamic availability predicate.',
+	/private getFluxDenoiseContext\(\): \{ model: ModelConfig; activeProvider: string \} \| null \{[\s\S]*if \(!pref\?\.enabled\) return null[\s\S]*getConnectedConfiguredProviderIds\(this\.settings, model\)[\s\S]*activeProvider \? \{ model, activeProvider \} : null/,
+	'The dropdown must resolve FLUX availability from the enabled model and configured provider.',
 )
 assert.match(
 	mainSource,
-	/private canDenoiseImage\(\): boolean \{[\s\S]*if \(!pref\?\.enabled\) return false[\s\S]*getConnectedConfiguredProviderIds\(this\.settings, model\)[\s\S]*getActiveProvider\(model, pref\.selectedProvider, connectedProviders\) !== null/,
-	'Denoise availability must require the FLUX model to be enabled with an active configured provider.',
+	/openDenoiseImage\(node: CanvasNode, canvas: Canvas\): void \{[\s\S]*new DenoiseChoiceModal\(this\.app,[\s\S]*handleImageDenoise\(node, canvas, method\)/,
+	'Denoise must open the method dropdown before dispatching a workflow.',
 )
-assert.match(
-	mainSource,
-	/openDenoiseImage\(node: CanvasNode, canvas: Canvas\): void \{\s*\n\s*void this\.handleImageDenoise\(node, canvas\)/,
-	'One-click denoise must call handleImageDenoise directly.',
-)
+assert.match(denoiseModalSource, /addOption\([\s\S]*'flux'[\s\S]*FLUX\.2 Klein 9B/, 'The denoise dropdown must retain FLUX.2 Klein 9B.')
 assert.doesNotMatch(
 	mainSource,
 	/getProvider\('bfl'\)|this\.settings\.providers\.bfl/,
@@ -158,8 +155,8 @@ assert.doesNotMatch(
 )
 assert.match(
 	mainSource,
-	/if \(!pref\?\.enabled\) \{[\s\S]*Add FLUX\.2 Klein 9B in settings to use denoise[\s\S]*getConnectedConfiguredProviderIds\(this\.settings, model\)[\s\S]*getActiveProvider\(model, pref\.selectedProvider, connectedProviders\)/,
-	'Denoise action must require the enabled FLUX model and resolve its current configured provider.',
+	/private async handleFluxImageDenoise\(node: CanvasNode, canvas: Canvas\): Promise<void> \{[\s\S]*const context = this\.getFluxDenoiseContext\(\)[\s\S]*const \{ model, activeProvider \} = context/,
+	'FLUX denoise must reuse the resolved current provider.',
 )
 assert.ok(
 	mainSource.includes("createPlaceholderNode(canvas, 'Denoising image…'"),
