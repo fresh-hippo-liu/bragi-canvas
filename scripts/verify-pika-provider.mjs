@@ -45,7 +45,7 @@ try {
 		duration: '5',
 		aspect_ratio: '16:9',
 	})
-	assert.equal(stdText.path, '/v1/media/kling/kling-3.0/standard/text-to-video')
+	assert.equal(stdText.path, '/v1/media/kling/kling-3.0/text-to-video')
 	assert.deepEqual(stdText.body, {
 		prompt: 'A slow pan',
 		duration: '5',
@@ -60,7 +60,7 @@ try {
 		aspect_ratio: '9:16',
 		refImages: ['https://relay.example/start.png'],
 	})
-	assert.equal(proImage.path, '/v1/media/kling/kling-3.0/pro/image-to-video')
+	assert.equal(proImage.path, '/v1/media/kling/kling-3.0/image-to-video')
 	assert.deepEqual(proImage.body, {
 		prompt: 'Blink and smile',
 		image: 'https://relay.example/start.png',
@@ -140,7 +140,7 @@ try {
 		refImages: ['https://relay.example/start.png'],
 	})
 	assert.deepEqual(submit, { done: false, taskId: 'job-1' })
-	assert.equal(requests[0].url, 'https://api.dev.pika.art/v1/media/kling/kling-3.0/standard/image-to-video')
+	assert.equal(requests[0].url, 'https://api.dev.pika.art/v1/media/kling/kling-3.0/image-to-video')
 	assert.equal(requests[0].headers['X-API-Key'], 'test-key')
 
 	process.__bragiPikaRequestHandler = async (request) => {
@@ -244,8 +244,8 @@ try {
 	)
 	assert.match(
 		modelSource,
-		/id: 'mode'[\s\S]*?providerOverrides: \{[\s\S]*?pika: \{[\s\S]*?label: 'Standard', value: 'std'[\s\S]*?label: 'Pro', value: 'pro'[\s\S]*?label: '4K', value: '4k'/,
-		'Kling 3.0 must expose Pika Standard, Pro, and 4K quality routes.',
+		/id: 'mode'[\s\S]*?providerOverrides: \{[\s\S]*?pika: \{ hidden: true \}/,
+		'Kling 3.0 must hide the quality selector Pika does not support.',
 	)
 	assert.doesNotMatch(modelSource, /apiModelId: 'kling-o3'/, 'Pika must not expose an unavailable Kling O3 route.')
 	assert.doesNotMatch(modelSource, /id: 'kling-o1'/, 'This change must not add a mismatched Kling O1 model.')

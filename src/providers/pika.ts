@@ -36,13 +36,6 @@ function optionalString(body: UnknownRecord, key: string, value: unknown): void 
 	if (typeof value === 'string' && value.trim()) body[key] = value
 }
 
-function parseQuality(value: unknown): 'standard' | 'pro' | '4k' {
-	const quality = stringValue(value, 'std')
-	if (quality === 'std' || quality === 'standard') return 'standard'
-	if (quality === 'pro' || quality === '4k') return quality
-	throw new Error('Pika Kling 3.0 quality must be Standard, Pro, or 4K.')
-}
-
 function parseV3Duration(value: unknown): string {
 	const duration = stringValue(value, '5')
 	if (!KLING_V3_DURATIONS.has(duration)) {
@@ -121,7 +114,6 @@ export function buildPikaVideoRequest(
 		throw new Error(`Pika Kling 3.0 does not support ${genMode || 'the selected mode'}.`)
 	}
 
-	const quality = parseQuality(params.mode)
 	const body: UnknownRecord = {
 		prompt,
 		duration: parseV3Duration(params.duration),
@@ -137,7 +129,7 @@ export function buildPikaVideoRequest(
 	}
 
 	return {
-		path: `/v1/media/kling/${KLING_3_MODEL_ID}/${quality}/${genMode === 'first-frame' ? 'image-to-video' : 'text-to-video'}`,
+		path: `/v1/media/kling/${KLING_3_MODEL_ID}/${genMode === 'first-frame' ? 'image-to-video' : 'text-to-video'}`,
 		body,
 	}
 }

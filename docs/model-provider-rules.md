@@ -61,8 +61,8 @@ When you add a model/provider, run the check; if it fails, fix the catalog rathe
 ## Pika Kling
 
 - Base URL: `https://api.dev.pika.art`. Authenticate every request with the configured Pika key in the `X-API-Key` header.
-- Bragi Kling 3.0 maps to Pika `kling-3.0`. Text-to-video and first-frame generation route through `/v1/media/kling/kling-3.0/{quality}/text-to-video` and `/v1/media/kling/kling-3.0/{quality}/image-to-video`; motion control uses `/v1/media/kling/kling-3.0/motion-control`.
-- Kling 3.0 quality values map `std` to Pika `standard` and preserve `pro` and `4k`. Pika does not expose Kling 3.0 first-last-frame generation.
+- Bragi Kling 3.0 maps to Pika `kling-3.0`. Text-to-video and first-frame generation route through `/v1/media/kling/kling-3.0/text-to-video` and `/v1/media/kling/kling-3.0/image-to-video`; motion control uses `/v1/media/kling/kling-3.0/motion-control`.
+- Pika does not expose Bragi's Kling 3.0 quality selector or first-last-frame generation, so hide the quality selector for this provider.
 - Pika does not list a compatible Kling 3.0 Omni model, so Bragi does not expose Pika for Kling 3.0 Omni.
 - Send Pika reference images and videos as Bragi temporary Relay HTTPS URLs.
 - Poll all submitted tasks through `GET /v1/media/jobs/{id}`. On completion, use `output.video.url`, falling back to `GET /v1/media/jobs/{id}/content` when the status payload omits the content URL.

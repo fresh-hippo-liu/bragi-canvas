@@ -68,13 +68,7 @@ const KLING_3_PARAMS: ModelParam[] = KLING_PARAMS.map((param) => param.id === 'm
 		...param,
 		providerOverrides: {
 			...param.providerOverrides,
-			pika: {
-				options: [
-					{ label: 'Standard', value: 'std' },
-					{ label: 'Pro', value: 'pro' },
-					{ label: '4K', value: '4k' },
-				],
-			},
+			pika: { hidden: true },
 		},
 	}
 	: param)
