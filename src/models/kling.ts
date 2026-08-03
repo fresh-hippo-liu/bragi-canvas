@@ -161,7 +161,7 @@ export const kling3: ModelConfig = {
 	supportedProviders: {
 		kling: { apiModelId: 'kling-v3' },
 		pika: {
-			apiModelId: 'kling-v3',
+			apiModelId: 'kling-3.0',
 			aggregated: true,
 			modes: ['text-to-video', 'first-frame', 'motion-control'],
 		},
@@ -184,7 +184,6 @@ export const klingOmni3: ModelConfig = {
 	type: 'video',
 	supportedProviders: {
 		kling: { apiModelId: 'kling-v3-omni' },
-		pika: { apiModelId: 'kling-o3', modes: ['first-frame'] },
 		apimart: { apiModelId: 'kling-v3-omni' },
 	},
 	modes: ['text-to-video', 'first-frame', 'first-last-frame', 'image-ref', 'video-ref', 'video-edit'],

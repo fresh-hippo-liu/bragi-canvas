@@ -39,13 +39,13 @@ try {
 	} = await import(`${pathToFileURL(bundlePath).href}?t=${Date.now()}`)
 
 	const stdText = buildPikaVideoRequest('A slow pan', {
-		modelId: 'kling-v3',
+		modelId: 'kling-3.0',
 		genMode: 'text-to-video',
 		mode: 'std',
 		duration: '5',
 		aspect_ratio: '16:9',
 	})
-	assert.equal(stdText.path, '/v1/media/kling/kling-v3/standard/text-to-video')
+	assert.equal(stdText.path, '/v1/media/kling/kling-3.0/standard/text-to-video')
 	assert.deepEqual(stdText.body, {
 		prompt: 'A slow pan',
 		duration: '5',
@@ -53,14 +53,14 @@ try {
 	})
 
 	const proImage = buildPikaVideoRequest('Blink and smile', {
-		modelId: 'kling-v3',
+		modelId: 'kling-3.0',
 		genMode: 'first-frame',
 		mode: 'pro',
 		duration: '10',
 		aspect_ratio: '9:16',
 		refImages: ['https://relay.example/start.png'],
 	})
-	assert.equal(proImage.path, '/v1/media/kling/kling-v3/pro/image-to-video')
+	assert.equal(proImage.path, '/v1/media/kling/kling-3.0/pro/image-to-video')
 	assert.deepEqual(proImage.body, {
 		prompt: 'Blink and smile',
 		image: 'https://relay.example/start.png',
@@ -69,14 +69,14 @@ try {
 	})
 
 	const motion = buildPikaVideoRequest('Follow the dance', {
-		modelId: 'kling-v3',
+		modelId: 'kling-3.0',
 		genMode: 'motion-control',
 		refImages: ['https://relay.example/character.png'],
 		refVideos: ['https://relay.example/motion.mp4'],
 		character_orientation: 'video',
 		keep_original_sound: 'yes',
 	})
-	assert.equal(motion.path, '/v1/media/kling/kling-v3/motion-control')
+	assert.equal(motion.path, '/v1/media/kling/kling-3.0/motion-control')
 	assert.deepEqual(motion.body, {
 		prompt: 'Follow the dance',
 		image_url: 'https://relay.example/character.png',
@@ -85,52 +85,38 @@ try {
 		keep_original_sound: 'yes',
 	})
 
-	const omni = buildPikaVideoRequest('Wake up', {
+	assert.throws(
+		() => buildPikaVideoRequest('Wake up', {
 		modelId: 'kling-o3',
 		genMode: 'first-frame',
 		duration: 12,
 		sound: 'on',
 		refImages: ['https://relay.example/omni.png'],
-	})
-	assert.equal(omni.path, '/v1/media/kling/kling-o3/image-to-video')
-	assert.deepEqual(omni.body, {
-		prompt: 'Wake up',
-		image_url: 'https://relay.example/omni.png',
-		duration: 12,
-		sound: 'on',
-	})
+		}),
+		/does not support model "kling-o3"/,
+	)
 
 	assert.throws(
-		() => buildPikaVideoRequest('x', { modelId: 'kling-v3', genMode: 'first-last-frame' }),
+		() => buildPikaVideoRequest('x', { modelId: 'kling-3.0', genMode: 'first-last-frame' }),
 		/does not support first-last-frame/,
 	)
 	assert.throws(
 		() => buildPikaVideoRequest('x', { modelId: 'kling-o3', genMode: 'text-to-video' }),
-		/only supports first-frame/,
+		/does not support model "kling-o3"/,
 	)
 	assert.throws(
-		() => buildPikaVideoRequest('x', { modelId: 'kling-v3', genMode: 'first-frame', refImages: [] }),
+		() => buildPikaVideoRequest('x', { modelId: 'kling-3.0', genMode: 'first-frame', refImages: [] }),
 		/requires one reference image/,
 	)
 	assert.throws(
 		() => buildPikaVideoRequest('x', {
-			modelId: 'kling-v3',
+			modelId: 'kling-3.0',
 			genMode: 'motion-control',
 			refImages: ['https://relay.example/character.png'],
 			refVideos: [],
 		}),
 		/requires one reference image and one reference video/,
 	)
-	assert.throws(
-		() => buildPikaVideoRequest('x', {
-			modelId: 'kling-o3',
-			genMode: 'first-frame',
-			duration: 16,
-			refImages: ['https://relay.example/start.png'],
-		}),
-		/duration must be a whole number from 3 to 15/,
-	)
-
 	const requests = []
 	const writes = []
 	const app = {
@@ -149,12 +135,12 @@ try {
 		return { status: 200, json: { id: 'job-1', status: 'queued' } }
 	}
 	const submit = await provider.generateVideo('Blink', {
-		modelId: 'kling-v3',
+		modelId: 'kling-3.0',
 		genMode: 'first-frame',
 		refImages: ['https://relay.example/start.png'],
 	})
 	assert.deepEqual(submit, { done: false, taskId: 'job-1' })
-	assert.equal(requests[0].url, 'https://api.dev.pika.art/v1/media/kling/kling-v3/standard/image-to-video')
+	assert.equal(requests[0].url, 'https://api.dev.pika.art/v1/media/kling/kling-3.0/standard/image-to-video')
 	assert.equal(requests[0].headers['X-API-Key'], 'test-key')
 
 	process.__bragiPikaRequestHandler = async (request) => {
@@ -253,7 +239,7 @@ try {
 	)
 	assert.match(
 		modelSource,
-		/id: 'kling-3\.0'[\s\S]*?pika: \{[\s\S]*?apiModelId: 'kling-v3'[\s\S]*?aggregated: true[\s\S]*?modes: \['text-to-video', 'first-frame', 'motion-control'\][\s\S]*?\}/,
+		/id: 'kling-3\.0'[\s\S]*?pika: \{[\s\S]*?apiModelId: 'kling-3\.0'[\s\S]*?aggregated: true[\s\S]*?modes: \['text-to-video', 'first-frame', 'motion-control'\][\s\S]*?\}/,
 		'Kling 3.0 must map Pika to the exact supported modes.',
 	)
 	assert.match(
@@ -261,26 +247,12 @@ try {
 		/id: 'mode'[\s\S]*?providerOverrides: \{[\s\S]*?pika: \{[\s\S]*?label: 'Standard', value: 'std'[\s\S]*?label: 'Pro', value: 'pro'[\s\S]*?label: '4K', value: '4k'/,
 		'Kling 3.0 must expose Pika Standard, Pro, and 4K quality routes.',
 	)
-	assert.match(
-		modelSource,
-		/id: 'kling-3\.0-omni'[\s\S]*?pika: \{ apiModelId: 'kling-o3', modes: \['first-frame'\] \}/,
-		'Kling 3.0 Omni must map Pika O3 to first-frame only.',
-	)
-	assert.match(
-		modelSource,
-		/id: 'mode'[\s\S]*?providerOverrides: \{ pika: \{ hidden: true \} \}/,
-		'Kling 3.0 Omni must hide its unsupported quality selector for Pika.',
-	)
-	assert.match(
-		modelSource,
-		/id: 'multi_shot'[\s\S]*?providerOverrides: \{ pika: \{ hidden: true \} \}/,
-		'Kling 3.0 Omni must hide its unsupported multi-shot selector for Pika.',
-	)
+	assert.doesNotMatch(modelSource, /apiModelId: 'kling-o3'/, 'Pika must not expose an unavailable Kling O3 route.')
 	assert.doesNotMatch(modelSource, /id: 'kling-o1'/, 'This change must not add a mismatched Kling O1 model.')
 	assert.match(
 		modelRulesSource,
-		/## Pika Kling[\s\S]*Kling 3\.0[\s\S]*Kling 3\.0 Omni/,
-		'Provider rules must document the Pika Kling 3.0 and Kling 3.0 Omni mappings.',
+		/## Pika Kling[\s\S]*kling-3\.0[\s\S]*does not list a compatible Kling 3\.0 Omni model/,
+		'Provider rules must document the supported Pika Kling 3.0 route and unavailable Omni mapping.',
 	)
 
 	console.log('Pika provider checks passed.')

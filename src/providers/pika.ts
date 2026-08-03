@@ -3,10 +3,9 @@ import { requestUrl } from 'obsidian'
 import type { GenerateVideoResult, VideoProvider } from './types'
 
 const PIKA_API_BASE = 'https://api.dev.pika.art'
-const KLING_V3_MODEL_ID = 'kling-v3'
-const KLING_O3_MODEL_ID = 'kling-o3'
+const KLING_3_MODEL_ID = 'kling-3.0'
 const KLING_V3_DURATIONS = new Set(['5', '10'])
-const KLING_O3_RATIOS = new Set(['16:9', '9:16', '1:1'])
+const KLING_3_RATIOS = new Set(['16:9', '9:16', '1:1'])
 const PIKA_SOUNDS = new Set(['on', 'off'])
 const MOTION_ORIENTATIONS = new Set(['image', 'video'])
 const KEEP_SOUND_VALUES = new Set(['yes', 'no'])
@@ -52,17 +51,9 @@ function parseV3Duration(value: unknown): string {
 	return duration
 }
 
-function parseO3Duration(value: unknown): number {
-	const duration = typeof value === 'number' ? value : Number.parseInt(stringValue(value, '5'), 10)
-	if (!Number.isInteger(duration) || duration < 3 || duration > 15) {
-		throw new Error('Pika Kling O3 duration must be a whole number from 3 to 15.')
-	}
-	return duration
-}
-
 function parseAspectRatio(value: unknown): string {
 	const ratio = stringValue(value, '16:9')
-	if (!KLING_O3_RATIOS.has(ratio)) {
+	if (!KLING_3_RATIOS.has(ratio)) {
 		throw new Error('Pika aspect ratio must be 16:9, 9:16, or 1:1.')
 	}
 	return ratio
@@ -90,40 +81,14 @@ export function buildPikaVideoRequest(
 	prompt: string,
 	params: Record<string, unknown> = {},
 ): PikaVideoRequest {
-	const modelId = stringValue(params.modelId, KLING_V3_MODEL_ID)
+	const modelId = stringValue(params.modelId, KLING_3_MODEL_ID)
 	const genMode = stringValue(params.genMode, 'text-to-video')
 	const refImages = stringArray(params.refImages)
 	const refVideos = stringArray(params.refVideos)
 
 	if (!prompt.trim()) throw new Error('Pika requires a prompt.')
 
-	if (modelId === KLING_O3_MODEL_ID) {
-		if (genMode !== 'first-frame') {
-			throw new Error('Pika Kling O3 only supports first-frame generation.')
-		}
-		if (refImages.length < 1) {
-			throw new Error('Pika Kling O3 first-frame generation requires one reference image.')
-		}
-		const body: UnknownRecord = {
-			prompt,
-			image_url: refImages[0],
-			duration: parseO3Duration(params.duration),
-		}
-		if (params.aspect_ratio !== undefined || params.aspectRatio !== undefined) {
-			body.aspect_ratio = parseAspectRatio(params.aspect_ratio ?? params.aspectRatio)
-		}
-		if (params.sound !== undefined) {
-			const sound = stringValue(params.sound)
-			if (!PIKA_SOUNDS.has(sound)) throw new Error('Pika sound must be on or off.')
-			body.sound = sound
-		}
-		return {
-			path: '/v1/media/kling/kling-o3/image-to-video',
-			body,
-		}
-	}
-
-	if (modelId !== KLING_V3_MODEL_ID) {
+	if (modelId !== KLING_3_MODEL_ID) {
 		throw new Error(`Pika does not support model "${modelId}".`)
 	}
 	if (genMode === 'first-last-frame') {
@@ -142,7 +107,7 @@ export function buildPikaVideoRequest(
 			throw new Error('Pika motion-control source audio must be yes or no.')
 		}
 		return {
-			path: '/v1/media/kling/kling-v3/motion-control',
+			path: `/v1/media/kling/${KLING_3_MODEL_ID}/motion-control`,
 			body: {
 				prompt,
 				image_url: refImages[0],
@@ -172,7 +137,7 @@ export function buildPikaVideoRequest(
 	}
 
 	return {
-		path: `/v1/media/kling/kling-v3/${quality}/${genMode === 'first-frame' ? 'image-to-video' : 'text-to-video'}`,
+		path: `/v1/media/kling/${KLING_3_MODEL_ID}/${quality}/${genMode === 'first-frame' ? 'image-to-video' : 'text-to-video'}`,
 		body,
 	}
 }
